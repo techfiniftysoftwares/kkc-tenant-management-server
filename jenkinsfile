@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Pre-deploy') {
+            steps {
+                sh """
+                    sudo chown -R jenkins:www-data /var/www/devifms.kusoya.com/api/storage
+                    sudo chmod -R 775 /var/www/devifms.kusoya.com/api/storage
+                """
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "Deploying to the server..."
+
+                // Use rsync to sync files locally to the target directory
+                sh """
+                    rsync -avz --no-g --delete --exclude '.git' --exclude '.env' --exclude 'vendor' . /var/www/devifms.kusoya.com/api
+                """
+
+                // Run additional commands in the target directory
+                sh """
+                    cd /var/www/devifms.kusoya.com/api
+                    git pull origin main
+                    composer install --optimize-autoloader --no-dev
+                    php artisan optimize
+                """
+            }
+        }
+
+        stage('Post-deploy') {
+            steps {
+                sh """
+                    sudo chown -R www-data:www-data /var/www/devifms.kusoya.com/api/storage
+                """
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished'
+        }
+        success {
+            echo 'Pipeline succeeded'
+        }
+        failure {
+            echo 'Pipeline failed'
+        }
+    }
+}
