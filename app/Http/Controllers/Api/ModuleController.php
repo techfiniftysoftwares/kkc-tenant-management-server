@@ -14,10 +14,9 @@ class ModuleController extends Controller
     {
         try {
             $modules = Module::with(['submodules' => function ($query) {
-                $query->select('id', 'module_id', 'title', 'path');
+                $query->select('id', 'module_id', 'title');
             }])
-            ->select('id', 'number', 'icon', 'name')
-            ->orderBy('number')
+            ->select('id','name')
             ->get();
 
             if ($modules->isEmpty()) {

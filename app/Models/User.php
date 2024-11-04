@@ -7,15 +7,14 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Traits\HasPermissions;
 use Illuminate\Contracts\Auth\CanResetPassword;
+use Illuminate\Auth\Notifications\ResetPassword;
 use App\Notifications\CustomResetPasswordNotification;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable implements CanResetPassword
 {
@@ -24,24 +23,14 @@ class User extends Authenticatable implements CanResetPassword
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<string>
+     * @var array<int, string>
      */
-    protected $fillable = [
-        'firstname',
-        'lastname',
-        'username',
-        'phone',
-        'position',
-        'role_id',
-        'status',
-        'email',
-        'password',
-    ];
+    protected $guarded = [];
 
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var array<string>
+     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -61,80 +50,19 @@ class User extends Authenticatable implements CanResetPassword
         'password' => 'hashed',
     ];
 
-
-
-    /**
-     * Get all locations for the user
-     */
-    public function locations(): HasMany
+    public function isActive(): bool
     {
-        return $this->hasMany(UserLocation::class);
+        return $this->status === 'active';
     }
 
-    /**
-     * Get all facilities for the user through locations
-     */
-    public function facilities(): BelongsToMany
-    {
-        return $this->belongsToMany(Facility::class, 'user_locations')
-                    ->withTimestamps();
-    }
 
-    /**
-     * Get all branches for the user through locations
-     */
-    public function branches(): BelongsToMany
-    {
-        return $this->belongsToMany(Branch::class, 'user_locations')
-                    ->withTimestamps();
-    }
 
-    /**
-     * Get all building attributes for the user through locations
-     */
-    public function buildingAttributes(): BelongsToMany
-    {
-        return $this->belongsToMany(BuildingAttribute::class, 'user_locations')
-                    ->withTimestamps();
-    }
-
-   
-    /**
-     * Other Relationships
-     */
-    public function assignedTools(): HasMany
-    {
-        return $this->hasMany(Tool::class, 'assigned_to');
-    }
-
-    public function technician(): HasOne
-    {
-        return $this->hasOne(Technician::class);
-    }
-
-    public function role(): BelongsTo
+    public function role()
     {
         return $this->belongsTo(Role::class);
     }
 
-    /**
-     * Access Check Methods
-     */
-    public function hasAccessToFacility(int $facilityId): bool
-    {
-        return $this->locations()
-            ->where('facility_id', $facilityId)
-            ->exists();
-    }
-
-    public function hasAccessToBranch(int $branchId): bool
-    {
-        return $this->locations()
-            ->where('branch_id', $branchId)
-            ->exists();
-    }
-
-    public function hasPermission(int $moduleId, int $submoduleId, string $action): bool
+    public function hasPermission($moduleId, $submoduleId, $action)
     {
         return $this->role->permissions()
             ->where('module_id', $moduleId)
@@ -143,27 +71,29 @@ class User extends Authenticatable implements CanResetPassword
             ->exists();
     }
 
-    /**
-     * Status Check Methods
-     */
-    public function isActive(): bool
-    {
-        return $this->status === 'active';
-    }
 
-    /**
-     * Password Reset Methods
-     */
-    public function sendPasswordResetNotification($token): void
+
+
+
+
+
+
+
+
+
+    public function sendPasswordResetNotification($token)
     {
+        // Generate a new token if not provided
         $token = $token ?: Str::random(60);
 
+        // Store the token in the password_resets table
         DB::table('password_resets')->insert([
             'email' => $this->email,
             'token' => $token,
             'created_at' => now(),
         ]);
 
+        // Send the password reset notification
         $this->notify(new CustomResetPasswordNotification($token));
     }
 }

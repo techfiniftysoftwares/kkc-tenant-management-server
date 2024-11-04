@@ -14,10 +14,6 @@ use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 use App\Mail\OTPMail;
 use App\Mail\PasswordEmail;
-use App\Notifications\UserLoginNotification;
-use App\Jobs\SendPasswordEmail;
-use App\Jobs\SendSupportEmail;
-use App\Events\UserLoggedIn;
 
 class AuthController extends Controller
 {
@@ -81,10 +77,6 @@ class AuthController extends Controller
             // ]);
 
 
-            // Send login notification
-            // Dispatch the UserLoggedIn event
-            // event(new UserLoggedIn($user));
-
             return response()->json([
                 'status' => 'success',
                 'success' => true,
@@ -96,6 +88,7 @@ class AuthController extends Controller
             // Authentication failed, increment login_attempts
             $user->login_attempts++;
             $user->save();
+
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
     }
@@ -179,10 +172,6 @@ class AuthController extends Controller
                 'phone' => 'string',
                 'position' => 'string',
                 'email' => 'required|email|unique:users,email',
-                'building_id' => 'nullable|exists:buildings,id',
-                'floor_id' => 'nullable|exists:floors,id',
-                'room_id' => 'nullable|exists:rooms,id',
-                'role' => 'required|exists:roles,id',
             ]);
 
             if ($validator->fails()) {
@@ -203,12 +192,9 @@ class AuthController extends Controller
             $user->password = Hash::make($password);
             $user->phone = $request->input('phone');
             $user->position = $request->input('position');
-            $user->building_id = $request->input('building_id');
-            $user->floor_id = $request->input('floor_id');
-            $user->room_id = $request->input('room_id');
+
             $user->role_id = $request->input('role');
-            $user->facility_id = $authUser->facility_id;
-            $user->branch_id = $authUser->branch_id;
+
             $user->save();
 
 
@@ -318,25 +304,17 @@ class AuthController extends Controller
     }
 
 
-    // private function sendPasswordEmail(User $user, $password)
-    // {
-    //     $emailData = [
-    //         'user' => $user,
-    //         'password' => $password,
-    //     ];
-
-    //     Mail::send('emails.password', $emailData, function ($message) use ($user) {
-    //         $message->to($user->email)
-    //             ->subject('Your Account Password');
-    //     });
-    // }
-
-
-
-
     private function sendPasswordEmail(User $user, $password)
     {
-        dispatch(new SendPasswordEmail($user, $password));
+        $emailData = [
+            'user' => $user,
+            'password' => $password,
+        ];
+
+        Mail::send('emails.password', $emailData, function ($message) use ($user) {
+            $message->to($user->email)
+                ->subject('Your Account Password');
+        });
     }
 
 
@@ -353,29 +331,4 @@ class AuthController extends Controller
     }
 
 
-
-    public function submit(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'message' => 'required',
-            'name' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return validationErrorResponse($validator->errors());
-        }
-
-        $name = $request->input('name', 'Anonymous');
-        $email = $request->input('email');
-        $message = $request->input('message');
-
-        try {
-            SendSupportEmail::dispatch($name, $email, $message);
-        } catch (\Exception $e) {
-            return serverErrorResponse('Failed to process support request', $e->getMessage());
-        }
-
-        return successResponse('Your message has been sent. We\'ll get back to you soon!');
-    }
 }

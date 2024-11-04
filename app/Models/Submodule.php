@@ -8,7 +8,7 @@ use Spatie\Permission\Models\Permission;
 
 class Submodule extends Model
 {
-    protected $fillable = ['title', 'path', 'module_id'];
+    protected $fillable = ['title',  'module_id'];
 
     public function module()
     {
