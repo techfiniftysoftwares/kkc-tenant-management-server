@@ -9,6 +9,8 @@ use App\Models\Role;
 
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+
 
 class UserController extends Controller
 {
@@ -68,51 +70,58 @@ class UserController extends Controller
 
 
 
-    // the one to get user
-    public function getProfile(Request $request)
-    {
-        try {
-            $user = $request->user();
-            $userData = $user->only([
-                'id',
-                'firstname',
-                'lastname',
-                'username',
-                'phone',
-                'status',
-                'email'
-            ]);
 
-            $roleId = $user->role_id;
-            if ($roleId) {
-                $role = Role::with('permissions')->find($roleId);
-                if ($role) {
-                    $userData['role'] = $role->only(['id', 'name']);
+public function getProfile(Request $request)
+{
+    try {
+        $user = $request->user();
+        $userData = $user->only([
+            'id',
+            'firstname',
+            'lastname',
+            'username',
+            'phone',
+            'status',
+            'email'
+        ]);
 
-                    $permissions = $role->permissions->map(function ($permission) {
-                        return [
-                            'module' => $permission->module->name,
-                            'submodule' => $permission->submodule->title,
-                            'action' => $permission->action,
-                        ];
-                    });
+        $roleId = $user->role_id;
+        if ($roleId) {
+            $role = Role::with('permissions')->find($roleId);
+            if ($role) {
+                $userData['role'] = $role->only(['id', 'name']);
 
-                    $userData['permissions'] = $permissions;
-                } else {
-                    $userData['role'] = null;
-                    $userData['permissions'] = [];
-                }
+                $permissions = $role->permissions->map(function ($permission) {
+                    return [
+                        'module' => $permission->module ? $permission->module->name : null,
+                        'submodule' => $permission->submodule ? $permission->submodule->title : null,
+                        'action' => $permission->action,
+                    ];
+                });
+
+                $userData['permissions'] = $permissions;
             } else {
                 $userData['role'] = null;
                 $userData['permissions'] = [];
             }
-
-            return successResponse('User profile retrieved successfully', $userData);
-        } catch (\Exception $e) {
-            // Handle exceptions here
-            return queryErrorResponse('An error occurred while retrieving user profile.', $e->getMessage(), 500);
+        } else {
+            $userData['role'] = null;
+            $userData['permissions'] = [];
         }
+
+        return successResponse('User profile retrieved successfully', $userData);
+    } catch (\Exception $e) {
+        // Log the error with stack trace for detailed debugging
+        Log::error('Error retrieving user profile', [
+            'error_message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        // Handle exceptions here
+        return queryErrorResponse('An error occurred while retrieving user profile.', $e->getMessage(), 500);
     }
+}
+
 
 
 
