@@ -12,7 +12,7 @@ use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
-
+use App\Http\Controllers\Api\PropertyController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -49,6 +49,8 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('roles', RoleController::class);
     Route::apiResource('permissions', PermissionController::class);
     Route::put('roles/{role}/permissions', [RoleController::class, 'updatePermissions']);
+
+    Route::apiResource('properties', PropertyController::class);
 
     // Modules
     Route::get('modules', [ModuleController::class, 'getModules']);
