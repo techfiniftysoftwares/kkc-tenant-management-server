@@ -15,10 +15,12 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use App\Notifications\CustomResetPasswordNotification;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 
 class User extends Authenticatable implements CanResetPassword
 {
-    use HasApiTokens, HasFactory, HasRoles, HasPermissions, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, HasPermissions, Notifiable , SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -70,6 +72,29 @@ class User extends Authenticatable implements CanResetPassword
             ->where('action', $action)
             ->exists();
     }
+
+
+
+
+
+
+    public function propertyManager()
+    {
+        return $this->hasMany(PropertyManager::class);
+    }
+
+    public function activeProperties()
+    {
+        return $this->hasMany(PropertyManager::class)
+            ->where('status', 'active')
+            ->with('property');
+    }
+
+    public function isPropertyManager()
+    {
+        return $this->role === 'property_manager';
+    }
+
 
 
 

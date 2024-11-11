@@ -6,13 +6,18 @@ use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PermissionController;
-use App\Http\Controllers\Api\ReportsController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Broadcast;
-use App\Http\Controllers\Api\PropertyController;
+use App\Http\Controllers\Api\{
+    PropertyController,
+    UnitController,
+    TenantController,
+    UnitTenantController,
+    PropertyManagerController
+};
+
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -50,7 +55,7 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('permissions', PermissionController::class);
     Route::put('roles/{role}/permissions', [RoleController::class, 'updatePermissions']);
 
-    Route::apiResource('properties', PropertyController::class);
+
 
     // Modules
     Route::get('modules', [ModuleController::class, 'getModules']);
@@ -59,4 +64,65 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/user/profile', [UserController::class, 'getProfile']);
     Route::put('/user/profile', [UserController::class, 'updateProfile']);
     Route::put('/users/{user}/edit', [UserController::class, 'updateUserSpecifics']);
+
+
+
+    // Property Routes
+    Route::prefix('properties')->group(function () {
+        Route::get('/', [PropertyController::class, 'index']);
+        Route::post('/', [PropertyController::class, 'store']);
+        Route::get('/{id}', [PropertyController::class, 'show']);
+        Route::put('/{id}', [PropertyController::class, 'update']);
+        Route::delete('/{id}', [PropertyController::class, 'destroy']);
+    });
+
+    // Unit Routes
+    Route::prefix('units')->group(function () {
+        Route::get('/', [UnitController::class, 'index']);
+        Route::post('/', [UnitController::class, 'store']);
+        Route::get('/{id}', [UnitController::class, 'show']);
+        Route::put('/{id}', [UnitController::class, 'update']);
+        Route::delete('/{id}', [UnitController::class, 'destroy']);
+    });
+
+    // Tenant Routes
+    Route::prefix('tenants')->group(function () {
+        Route::get('/', [TenantController::class, 'index']);
+        Route::post('/', [TenantController::class, 'store']);
+        Route::get('/{id}', [TenantController::class, 'show']);
+        Route::put('/{id}', [TenantController::class, 'update']);
+        Route::delete('/{id}', [TenantController::class, 'destroy']);
+    });
+
+    // Lease (UnitTenant) Routes
+    Route::prefix('leases')->group(function () {
+        Route::get('/', [UnitTenantController::class, 'index']);
+        Route::post('/', [UnitTenantController::class, 'store']);
+        Route::get('/{id}', [UnitTenantController::class, 'show']);
+        Route::put('/{id}', [UnitTenantController::class, 'update']);
+        Route::delete('/{id}', [UnitTenantController::class, 'destroy']);
+
+        // Additional lease management routes
+        Route::get('/active', [UnitTenantController::class, 'getActiveLeases']);
+        Route::get('/overdue', [UnitTenantController::class, 'getOverduePayments']);
+        Route::put('/{id}/payment', [UnitTenantController::class, 'updatePaymentStatus']);
+        Route::put('/{id}/terminate', [UnitTenantController::class, 'terminateLease']);
+        Route::put('/{id}/renew', [UnitTenantController::class, 'renewLease']);
+        Route::get('/{id}/payments', [UnitTenantController::class, 'getPaymentHistory']);
+    });
+
+    // Property Manager Routes
+    Route::prefix('property-managers')->group(function () {
+        Route::get('/', [PropertyManagerController::class, 'index']);
+        Route::post('/', [PropertyManagerController::class, 'store']);
+        Route::get('/{id}', [PropertyManagerController::class, 'show']);
+        Route::put('/{id}', [PropertyManagerController::class, 'update']);
+        Route::delete('/{id}', [PropertyManagerController::class, 'destroy']);
+
+        // Additional property manager routes
+        Route::get('/active', [PropertyManagerController::class, 'getActiveManagers']);
+        Route::get('/{id}/properties', [PropertyManagerController::class, 'getManagerProperties']);
+        Route::post('/assign', [PropertyManagerController::class, 'assignProperties']);
+        Route::put('/{id}/deactivate', [PropertyManagerController::class, 'deactivateManager']);
+    });
 });
